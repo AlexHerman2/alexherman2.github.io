@@ -1,34 +1,26 @@
----
-layout: single
-title: "Test Driven Development with Go"
----
+<h1 id="test-driven-development-with-go">Test driven development with Go</h1>
 
-# Test driven development with Go
+<h3 id="background">Background</h3>
+<p>What I’m working on for this project is an API sand boxing tool that can read a Swagger spec and then serve mock responses. API Blueprint has something similar (called <a href="https://github.com/Aconex/drakov">Drakov</a>) that is super useful, but I haven’t been able to find something comparable for Swagger that doesn’t require an intermediate step of code generation. Besides, this could be kind of a fun thing to make.</p>
 
-### Background
-What I’m working on for this project is an API sand boxing tool that can read a Swagger spec and then serve mock responses. API Blueprint has something similar (called [Drakov](https://github.com/Aconex/drakov)) that is super useful, but I haven’t been able to find something comparable for Swagger that doesn’t require an intermediate step of code generation. Besides, this could be kind of a fun thing to make.
+<p>This post will focus on just a small piece of that larger (potential) project. What we’re going to do is write a method that takes a Swagger formatted path string (with the curly bracketed parameters) and returns a regex that can determine if a specific request path matches it.</p>
 
-This post will focus on just a small piece of that larger (potential) project. What we’re going to do is write a method that takes a Swagger formatted path string (with the curly bracketed parameters) and returns a regex that can determine if a specific request path matches it.
-
-### Getting started
-In a previous post, we set up a Go Lang dev environment (with vim-go, delve, and whatnot). We’ll be using that environment and adding Go tests as well. Let’s start by getting go tests installed
-```
-go get -u github.com/cweill/gotests/...
-```
- And the Vim add on to use it:
-```
-git clone https://github.com/buoto/gotests-vim.git ~/.vim/bundle/gotests-vim
-```
-### The first test
-So, I know that we’re supposed to write a test first,  it we’re going to fudge a bit and start with an interface definition of the path substituter. It’s just going to be one method, but it having an interface instead of just a struct will make testing whatever uses this substituter much easier to test.
-```
-package path
+<h3 id="getting-started">Getting started</h3>
+<p>In a previous post, we set up a Go Lang dev environment (with vim-go, delve, and whatnot). We’ll be using that environment and adding Go tests as well. Let’s start by getting go tests installed</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>go get -u github.com/cweill/gotests/...
+</code></pre></div></div>
+<p>And the Vim add on to use it:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone https://github.com/buoto/gotests-vim.git ~/.vim/bundle/gotests-vim
+</code></pre></div></div>
+<h3 id="the-first-test">The first test</h3>
+<p>So, I know that we’re supposed to write a test first,  it we’re going to fudge a bit and start with an interface definition of the path substituter. It’s just going to be one method, but it having an interface instead of just a struct will make testing whatever uses this substituter much easier to test.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>package path
 
 type URLSubstitutor interface {
     ToRegex(swaggerPath string) string
 }
-```
-Now, let’s make an empty struct that implements that interface. Simple enough
+</code></pre></div></div>
+<p>Now, let’s make an empty struct that implements that interface. Simple enough</p>
 
 <pre>
 <code>
@@ -46,15 +38,13 @@ type URLSubstitutor interface {
 </code>
 </pre>
 
-Now, this is something cool I learned the other day. If you move the cursor over the method, you can use the following Vim command to generate the empty test boilerplate. It’s amazing
-```
-:GoTests
-```
-Note the plural of the command: “Tests” not “Test”. Singular “Test” will just run the (non-existent) unit tests.
+<p>Now, this is something cool I learned the other day. If you move the cursor over the method, you can use the following Vim command to generate the empty test boilerplate. It’s amazing</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>:GoTests
+</code></pre></div></div>
+<p>Note the plural of the command: “Tests” not “Test”. Singular “Test” will just run the (non-existent) unit tests.</p>
 
-So, let’s see what this magic gave us. Navigate to the test file (`:GoAlt`)
-```
-package path
+<p>So, let’s see what this magic gave us. Navigate to the test file (<code class="language-plaintext highlighter-rouge">:GoAlt</code>)</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>package path
 
 import "testing"
 
@@ -79,15 +69,14 @@ func Test_urlSubstitutor_ToRegex(t *testing.T) {
         })
     }
 }
-```
-Neat!
+</code></pre></div></div>
+<p>Neat!</p>
 
-So, let’s create our first test. This will just be a simple case where there aren’t any parameters in the path to substitute. The first thing we need to do is add an empty struct in the collection of test struct. Then, with the cursor in the empty struct, we do
-```
-:GoFillStruct
-```
+<p>So, let’s create our first test. This will just be a simple case where there aren’t any parameters in the path to substitute. The first thing we need to do is add an empty struct in the collection of test struct. Then, with the cursor in the empty struct, we do</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>:GoFillStruct
+</code></pre></div></div>
 
-The output of this command is as close to magic as I think I’ve ever seen in my life:
+<p>The output of this command is as close to magic as I think I’ve ever seen in my life:</p>
 
 <pre>
 <code>
@@ -126,10 +115,9 @@ func Test_urlSubstitutor_ToRegex(t *testing.T) {
 </code>
 </pre>
 
-Now, we just need to fill in the stubbed fields. Our first test is a path with no substitution so, let’s take a stab at it:
+<p>Now, we just need to fill in the stubbed fields. Our first test is a path with no substitution so, let’s take a stab at it:</p>
 
-```
-        {
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>        {
             name: "No params",
             subs: urlSubstitutor{},
             args: args{
@@ -137,9 +125,9 @@ Now, we just need to fill in the stubbed fields. Our first test is a path with n
             },
             want: "/some/path",
         },
-```
+</code></pre></div></div>
 
-We run the tests `:GoTest`and (surprise surprise) the test fails because we don’t have any logic in the substitution method. Let’s add just the bare minimum to get the test to pass
+<p>We run the tests <code class="language-plaintext highlighter-rouge">:GoTest</code>and (surprise surprise) the test fails because we don’t have any logic in the substitution method. Let’s add just the bare minimum to get the test to pass</p>
 
 <pre>
 <code>
@@ -157,8 +145,8 @@ func (subs urlSubstitutor) ToRegex(swaggerPath string) string {
 </code>
 </pre>
 
-### Something more reasonable
-We run our tests and they pass! Now, clearly what we have is insufficient but, let’s see how. We go back to the tests `:GoAlt` , add another empty struct, then fill it `:GoFillStruct`. We’ll fill in the stubbed struct with a path with one substitution.
+<h3 id="something-more-reasonable">Something more reasonable</h3>
+<p>We run our tests and they pass! Now, clearly what we have is insufficient but, let’s see how. We go back to the tests <code class="language-plaintext highlighter-rouge">:GoAlt</code> , add another empty struct, then fill it <code class="language-plaintext highlighter-rouge">:GoFillStruct</code>. We’ll fill in the stubbed struct with a path with one substitution.</p>
 
 <pre>
 <code>
@@ -205,9 +193,9 @@ func Test_urlSubstitutor_ToRegex(t *testing.T) {
 </code>
 </pre>
 
-We run our tests and they fail. No big deal, let’s improve the logic of our method. We want to replace anything inside a pair of curly brackets with `[^/\s]+`. That is, one or more characters that aren’t a slash or whitespace. Now, I know that that’s a much more broad matcher than what would be a valid url, but in a a later part of the project we’ll be more complex validation, this is just for a broad request match.
+<p>We run our tests and they fail. No big deal, let’s improve the logic of our method. We want to replace anything inside a pair of curly brackets with <code class="language-plaintext highlighter-rouge">[^/\s]+</code>. That is, one or more characters that aren’t a slash or whitespace. Now, I know that that’s a much more broad matcher than what would be a valid url, but in a a later part of the project we’ll be more complex validation, this is just for a broad request match.</p>
 
-Anyhow, to do this we’ll need to call the `ReplaceAllString`method, and substitute anything that lives between two curly brackets with our matcher regex. Something like this:
+<p>Anyhow, to do this we’ll need to call the <code class="language-plaintext highlighter-rouge">ReplaceAllString</code>method, and substitute anything that lives between two curly brackets with our matcher regex. Something like this:</p>
 
 <pre>
 <code>
@@ -230,7 +218,7 @@ func (subs urlSubstitutor) ToRegex(swaggerPath string) string {
 </code>
 </pre>
 
-Looks promising, but let’s run our tests....success! Now, let’s add more test cases. First, a path with 2 parameters.
+<p>Looks promising, but let’s run our tests….success! Now, let’s add more test cases. First, a path with 2 parameters.</p>
 
 <pre>
 <code>
@@ -285,7 +273,7 @@ func Test_urlSubstitutor_ToRegex(t *testing.T) {
 </code>
 </pre>
 
-Looks like that passes. How about 3 parameters.
+<p>Looks like that passes. How about 3 parameters.</p>
 
 <pre>
 <code>
@@ -348,8 +336,8 @@ func Test_urlSubstitutor_ToRegex(t *testing.T) {
 </code>
 </pre>
 
-### Negative cases
-Still good. Let’s add some negative cases. Now, even if we get an invalidly formatted path string, our substitution method should t return an error. It should just not find a match in the regex substitution. Let’s add 2 new test cases: one missing a closing curly bracket, and one missing the opening curly bracket. In these cases we should expect to get the unaltered path back.
+<h3 id="negative-cases">Negative cases</h3>
+<p>Still good. Let’s add some negative cases. Now, even if we get an invalidly formatted path string, our substitution method should t return an error. It should just not find a match in the regex substitution. Let’s add 2 new test cases: one missing a closing curly bracket, and one missing the opening curly bracket. In these cases we should expect to get the unaltered path back.</p>
 
 <pre>
 <code>
@@ -428,8 +416,8 @@ func Test_urlSubstitutor_ToRegex(t *testing.T) {
 </code>
 </pre>
 
-And we do.
+<p>And we do.</p>
 
-So there we have it. Once we get our environment setup and hav a good idea of what we want to, test driven development in Go is relatively easy. I hope you found this helpful. In a future post we’ll expand on this by introducing mocking and error cases. Stay tuned!
+<p>So there we have it. Once we get our environment setup and hav a good idea of what we want to, test driven development in Go is relatively easy. I hope you found this helpful. In a future post we’ll expand on this by introducing mocking and error cases. Stay tuned!</p>
 
-If you're interested in the project I mentioned above (that this tutorial is writing code for), feel free to [check it out](https://github.com/Simulalex/open-api-sandbox). It's probably pretty sparse at the moment and more _idea_ than _project_, but feel free to contribute, critize, encourage, or dissuade as you feel compelled.
+<p>If you’re interested in the project I mentioned above (that this tutorial is writing code for), feel free to <a href="https://github.com/Simulalex/open-api-sandbox">check it out</a>. It’s probably pretty sparse at the moment and more <em>idea</em> than <em>project</em>, but feel free to contribute, critize, encourage, or dissuade as you feel compelled.</p>

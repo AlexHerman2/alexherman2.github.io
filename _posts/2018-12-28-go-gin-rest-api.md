@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: single
 title: "Making a simple REST API with Go and Gin"
 ---
 

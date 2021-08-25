@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: single
 title: "Getting Started with JSON Schema"
 ---
 

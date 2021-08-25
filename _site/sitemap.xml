@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<url>
+<loc>http://localhost:4000/multiple-language-codegen/</loc>
+<lastmod>2018-07-08T00:00:00-04:00</lastmod>
+</url>
+<url>
+<loc>http://localhost:4000/swagger-documentation/</loc>
+<lastmod>2018-07-08T00:00:00-04:00</lastmod>
+</url>
+<url>
+<loc>http://localhost:4000/getting-start-with-json-schema/</loc>
+<lastmod>2018-07-16T00:00:00-04:00</lastmod>
+</url>
+<url>
+<loc>http://localhost:4000/go-dev-environment-with-vagrant/</loc>
+<lastmod>2018-08-05T00:00:00-04:00</lastmod>
+</url>
+<url>
+<loc>http://localhost:4000/go-gin-rest-api/</loc>
+<lastmod>2018-12-28T00:00:00-05:00</lastmod>
+</url>
+<url>
+<loc>http://localhost:4000/test-driven-development-in-go/</loc>
+<lastmod>2019-01-12T00:00:00-05:00</lastmod>
+</url>
+</urlset>

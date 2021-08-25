@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: single
 title: "Setting Up a Development Environment for Go"
 ---
 

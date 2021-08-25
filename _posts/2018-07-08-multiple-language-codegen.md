@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: single
 title: "Generating SDKs from a Swagger Spec for Multiple Languages"
 ---
 

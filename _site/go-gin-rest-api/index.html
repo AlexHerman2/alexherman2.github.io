@@ -1,0 +1,306 @@
+<h1 id="creating-an-api-with-go-and-gonicgin">Creating an API with Go and Gonic/Gin</h1>
+<p>In a previous post, we documented the contract of an example API with Swagger. Now, let’s actually create it. For this, we’ll be using Go with the Gin framework.</p>
+
+<p>This is just a simple example API and probably not something you would ever put in production. It allows consumers of the API to create, update, and delete Magic 8-Ball style fortunes and, when queried, will return a random fortune. If you’re more of a skip-to-the-end type person, here is a link to the full project: https://github.com/Simulalex/magic-eight-ball-gin-api</p>
+
+<h3 id="what-is-gonicgin">What is Gonic/Gin</h3>
+<p>Gin is a Go API framework. It brings some of the routing capabilities of Gorilla Mux together with some nice serialization/deserialization abstractions. Bear in mind, there’s no reason we can’t do everything here in vanilla Go, but why reinvent the wheel.</p>
+
+<h3 id="getting-started">Getting started</h3>
+<p>So, first we’re going to need to pull down some of the dependencies we’ll be using, primarily Gin and sqlite3.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>go get -u github.com/gin-gonic/gin
+go get github.com/mattn/go-sqlite3
+</code></pre></div></div>
+
+<h3 id="the-payloads">The payloads</h3>
+<p>From the API contract definition, we already know what the incoming and outgoing payload is going to look like. Getting this out of the way right off the bat will allow us to use it in upcoming steps (and will let us get some work done while we wait for the first cup of coffee to kick in). We’‘ll put this in <code class="language-plaintext highlighter-rouge">handlers/fortune.go</code></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>type Fortune struct {
+	Text string `json:"text"`
+}
+</code></pre></div></div>
+
+<h3 id="the-persistence-layer">The persistence layer</h3>
+<p>Based on the API contract we’ve agreed upon before, we basically just have a run of the mill CRUD application. We want our changes to be persisted, but this is just a demo so we don’t need to go overboard, so we’ll just use a SQLite database file stored to our local disk. If you’re using any kind of ephemeral orchestration system (like Kubernetes) you probably aren’t going to want to store the file to the local file system.</p>
+
+<p>Let’s go ahead and stub out our crud DB operations. I like to keep database stuff in its own package for cleanliness so, we’ll create a directory called db, and in it create a file called db.go. We can then create an interface for our crud operations.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>type FortuneDatabase interface {
+	Initialize() error
+	ReadRandom() (string, error)
+	Create(fortune string) (int64, error)
+	Update(index int, fortune string) error
+	Delete(index int) error
+}
+</code></pre></div></div>
+
+<p>Now, let’s create a struct to implement this interface. We’ll need it to have a connection to SQLite so we can actually query out database so, let’s create a factory method to instantiate our struct.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>package db
+
+import (
+	"database/sql"
+	"log"
+
+	_ "github.com/mattn/go-sqlite3"
+)
+
+type fortuneDatabase struct {
+	conn *sql.DB
+}
+
+func Create(dbFilePath string) FortuneDatabase {
+	db, err := sql.Open("sqlite3", dbFilePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fortuneDb := fortuneDatabase{db}
+	if err := fortuneDb.Initialize(); err != nil {
+		log.Fatal(err)
+	}
+
+	return fortuneDb
+
+}
+
+</code></pre></div></div>
+
+<p>Notice how we added the table creation logic in this constructor. This probably isn’t what you’d want to do with any API you intend to use for real, but for our example purposes we’ll let it slide.</p>
+
+<p>At this point, our code won’t compile because our struct doesn’t implement the methods it needs to to implement the interface. Let’s fix that by stubbing our all our methods</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>func (db fortuneDatabase) Initialize() error {
+    //ToDo: implement
+}
+
+func (db fortuneDatabase) ReadRandom() (string, error) {
+    //ToDo: implement
+}
+
+func (db fortuneDatabase) Create(fortune string) (int64, error) {
+    //ToDo: implement
+}
+
+func (db fortuneDatabase) Update(index int, fortune string) error {
+    //ToDo: implement
+}
+
+func (db fortuneDatabase) Delete(index int) error {
+    //ToDo: implement
+}
+</code></pre></div></div>
+
+<p>Now, all we need to do is make our stubbed methods call the appropriate sql queries. Let’s start with the <code class="language-plaintext highlighter-rouge">Initialize</code> method. This well create a new instance of a SQLite database and define our schema. This doesn’t need to return any data in the case of success, only any errors.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>func (db fortuneDatabase) Initialize() error {
+	_, err := db.conn.Exec("CREATE TABLE IF NOT EXISTS fortunes (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, fortune TEXT)")
+	return err
+}
+</code></pre></div></div>
+
+<p>Next, we’ll take a look at our <code class="language-plaintext highlighter-rouge">Create</code> method. For this, all we need is a simple sql insert wrapped in the appropriate go sql library call. The insert method will need to return either the ID of the inserted fortune, or any error the SQL call generates. Since the inserted ID is autogenerated, we’ll need to get the last inserted ID with <code class="language-plaintext highlighter-rouge">result.LastInsertId()</code>.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>func (db fortuneDatabase) Create(fortune string) (int64, error) {
+	result, err := db.conn.Exec("INSERT INTO fortunes(fortune) VALUES(?)", fortune)
+
+	if result != nil {
+		return result.LastInsertId()
+	}
+	return -1, err
+}
+</code></pre></div></div>
+
+<p>Next, let’s take a look at our read call. Now, this is a little bit different from a typical read method in that, instead of providing the method with some kind of row key or lookup information, we want a random fortune. So, for this, our sql statement is going to get the first fortune it finds, sorted randomly. We wrap this into our scan method and pass in a pointer to our previously declared variable. Finally we turn out raw response text into our return payload struct and return it.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>func (db fortuneDatabase) ReadRandom() (string, error) {
+	var fortune string
+	err := db.conn.QueryRow("SELECT fortune FROM fortunes ORDER BY RANDOM() LIMIT 1").Scan(&amp;fortune)
+	return fortune, err
+}
+</code></pre></div></div>
+
+<p>Our last two sql methods will operate on specific rows in our database so the callers into our methods will have to provide the id of the row to mutate. We’ll use a prepared statement to pass that key into our sql statement. This way we don’t have to worry about sql injection attacks, character escaping or any of that crap.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>func (db fortuneDatabase) Update(index int, fortune string) error {
+	_, err := db.conn.Exec("UPDATE fortunes SET fortune=? WHERE id=?", fortune, index)
+	return err
+}
+
+func (db fortuneDatabase) Delete(index int) error {
+	_, err := db.conn.Exec("DELETE FROM fortunes WHERE id=?", index)
+	return err
+}
+</code></pre></div></div>
+
+<p>And there we have it, all the operations we need to support a full cruddy API.</p>
+
+<h3 id="the-handler">The Handler</h3>
+<p>Now that we have our database interface, we can start writing the methods that our router will send requests to. The Gin framework provides a nice method signature that will allow our methods to be called by its route. For example:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>func (impl FortuneHandlerImpl) Read(c *gin.Context) {
+    //etc.
+}
+</code></pre></div></div>
+
+<p>So, what we’re going to do is create an interface that defines a method for each of our CRUD operations. Each of these methods will have the signature Gin requires. This will be in the file <code class="language-plaintext highlighter-rouge">handlers/fortune.go</code>.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>type FortuneHandler interface {
+	Read(c *gin.Context)
+	Create(c *gin.Context)
+	Update(c *gin.Context)
+	Delete(c *gin.Context)
+}
+
+</code></pre></div></div>
+
+<p>Next, we’ll create a struct that implements our interface.  Additionally, it’ll have an instance our of db interface to have access to our persistence layer. (Note the payload struct and the handler interface we’ve already defined).</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>package handlers
+
+import (
+	"github.com/Simulalex/magic-eight-ball-gin-api/db"
+	"github.com/gin-gonic/gin"
+	"net/http"
+	"strconv"
+)
+
+type Fortune struct {
+	Text string `json:"text"`
+}
+
+type FortuneHandler interface {
+	Read(c *gin.Context)
+	Create(c *gin.Context)
+	Update(c *gin.Context)
+	Delete(c *gin.Context)
+}
+
+type FortuneHandlerImpl struct {
+	db db.FortuneDatabase
+}
+
+func Create(dbFilePath string) FortuneHandler {
+	return FortuneHandlerImpl{db.Create(dbFilePath)}
+}
+
+func (impl FortuneHandlerImpl) Read(c *gin.Context) {
+    //ToDo: implement
+}
+
+func (impl FortuneHandlerImpl) Create(c *gin.Context) {
+    //ToDo: implement
+}
+
+func (impl FortuneHandlerImpl) Update(c *gin.Context) {
+    //ToDo: implement
+}
+
+func (impl FortuneHandlerImpl) Delete(c *gin.Context) {
+    //ToDo: implement
+}
+</code></pre></div></div>
+
+<p>Notice the <code class="language-plaintext highlighter-rouge">Create</code> method we added above. Given a path to the SQLit database file, it will create an instance of the DB struct to use it. This allows our handler struct to only depend on the DB interface, not any particular struct. Dependency Inversion and whatnot.</p>
+
+<p>While we’re at it, let’s fill in the bodies of our methods as well. Let’s start with <code class="language-plaintext highlighter-rouge">Read</code>:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>func (impl FortuneHandlerImpl) Read(c *gin.Context) {
+	text, err := impl.db.ReadRandom()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, Fortune{text})
+}
+
+</code></pre></div></div>
+
+<p>Notice how we’re basically just calling the database methods, and then mapping the result to a success or failure payload. Now, if this were a <em>real</em> API, we should probably put more effort in to reasonable error responses and preventing SQLite error messages from making their way into our responses, but, that will be a post of another time.</p>
+
+<p>Next, the <code class="language-plaintext highlighter-rouge">Create</code> method is nothing super exciting:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>func (impl FortuneHandlerImpl) Create(c *gin.Context) {
+	var fortune Fortune
+	if err := c.BindJSON(&amp;fortune); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	id, err := impl.db.Create(fortune.Text)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"id": id})
+}
+
+</code></pre></div></div>
+
+<p>Now, let’s to the <code class="language-plaintext highlighter-rouge">Update</code> and <code class="language-plaintext highlighter-rouge">Delete</code> methods. Here is more of the same, the only trick is that we’ll have to pull the ID of the fortune out of the request path and turn it into an integer before we pass it into the DB layer.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>func (impl FortuneHandlerImpl) Update(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+	var fortune Fortune
+	if err := c.BindJSON(&amp;fortune); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := impl.db.Update(id, fortune.Text); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusOK)
+}
+
+func (impl FortuneHandlerImpl) Delete(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+
+	if err := impl.db.Delete(id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusOK)
+}
+</code></pre></div></div>
+<p>Things are really starting to shape up. Next…</p>
+
+<h3 id="the-routing">The Routing</h3>
+<p>At this point, we have all the business logic, persistence logic, and payload definition. All we have left to do is create an instance of the Gin router, implement the the paths as defined in our contract, and forward requests to our controller methods.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>package main
+
+import (
+	"github.com/Simulalex/magic-eight-ball-gin-api/handlers"
+	"github.com/gin-gonic/gin"
+)
+
+func main() {
+	r := gin.Default()
+
+	handlers := handlers.Create("db.sql")
+
+	r.GET("/fortunes", handlers.Read)
+	r.POST("/fortunes", handlers.Create)
+	r.PUT("/fortunes/:id", handlers.Update)
+	r.DELETE("/fortunes/:id", handlers.Delete)
+
+	r.Run()
+}
+</code></pre></div></div>
+<p>Note how we have the <code class="language-plaintext highlighter-rouge">id</code> of the fortune to update or delete in the path. Just a simple <code class="language-plaintext highlighter-rouge">:id</code>.</p>
+
+<p>And there we go! Let’s fire it up and see what happens.</p>
+
+<p>Now, let’s run some curls against our brand new api</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl -X POST localhost:8080/fortunes -d '{"text": "Outlook certain"}'
+curl -X POST localhost:8080/fortunes -d '{"text": "Sources say No"}'
+curl -X POST localhost:8080/fortunes -d '{"text": "Ask again later"}'
+
+curl localhost:8080/fortunes
+
+curl -X PUT localhost:8080/fortunes/2 -d '{"text": "Outlook murky"}'
+
+curl -X DELETE localhost:8080/fortunes/2
+</code></pre></div></div>
+
+<h3 id="conclusion">Conclusion</h3>
+<p>So, there we have it; a fully functional (if somewhat useless) API done and dusted in no time. Thankfully, most of the deep(ish) thinking work was already done for us when the contract was written and agreed upon. Based on how often we referred to the contract through this tutorial, I hope it was clear how much of a productivity boost contract first API development is.</p>
+
+<p>We also saw how Gin made a lot of the boring http stuff much simpler. Of course, we could do the same thing with the standard Go router, or Gorilla Mux, but that would have required more boilerplate. I hope this was helpful. As usual, if you have any comments, corrections, or suggestions, feel free to make a pull request against: https://github.com/Simulalex/alexherman.net</p>
