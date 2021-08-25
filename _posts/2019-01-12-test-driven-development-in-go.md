@@ -1,7 +1,8 @@
 ---
-title: "Test Driven Development with Go"
 layout: post
+title: "Test Driven Development with Go"
 ---
+
 # Test driven development with Go
 
 ### Background

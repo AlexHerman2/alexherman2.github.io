@@ -1,6 +1,6 @@
 ---
-title: "Generating SDKs from a Swagger Spec for Multiple Languages"
 layout: post
+title: "Generating SDKs from a Swagger Spec for Multiple Languages"
 ---
 
 ## Outline

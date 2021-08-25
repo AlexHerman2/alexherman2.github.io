@@ -1,6 +1,6 @@
 ---
-title: "Getting Started with JSON Schema"
 layout: post
+title: "Getting Started with JSON Schema"
 ---
 
 # Getting Started with JSON Schema

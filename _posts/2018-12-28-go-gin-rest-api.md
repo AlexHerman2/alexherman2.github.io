@@ -1,7 +1,8 @@
 ---
-title: "Making a simple REST API with Go and Gin"
 layout: post
+title: "Making a simple REST API with Go and Gin"
 ---
+
 # Creating an API with Go and Gonic/Gin
 In a previous post, we documented the contract of an example API with Swagger. Now, let’s actually create it. For this, we’ll be using Go with the Gin framework.
 

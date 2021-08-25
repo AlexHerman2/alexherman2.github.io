@@ -1,7 +1,8 @@
 ---
-title: "Setting Up a Development Environment for Go"
 layout: post
+title: "Setting Up a Development Environment for Go"
 ---
+
 Setting up a Go Development Environment
 No matter what you do or where you work, new technologies are constantly coming along that change (for better or worse) what you do. Languages, frameworks, SRE stuff, CI pipelines, it seems almost endless.
 
