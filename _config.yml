@@ -1,5 +1,21 @@
 remote_theme: "mmistakes/minimal-mistakes@4.24.0"
 
+minimal_mistakes_skin    : "mint"
+
+# Site Settings
+locale                   : "en-US"
+title                    : "The Subtle Art of Waiting for Lunch"
+title_separator          : "-"
+subtitle                 : # site tagline that appears below site title in masthead
+name                     : "Alex Herman"
+description              : "A collection of posts and tutorials"
+url                      : "https://alexherman2.github.io"
+repository               : alexherman2/alexherman2.github.io
+teaser                   : # path of fallback teaser image, e.g. "/assets/images/500x300.png"
+logo                     : # path of logo image to display in the masthead, e.g. "/assets/images/88x88.png"
+masthead_title           : " "
+words_per_minute         : 200
+
 plugins:
   - jekyll-paginate
   - jekyll-sitemap
