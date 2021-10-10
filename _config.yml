@@ -20,25 +20,23 @@ words_per_minute         : 200
 author:
   name             : "Alex Herman"
   avatar           : "/assets/images/bio-photo.jpg"
-  bio              : "I'm a software developer in sunny Cleveland, Ohio. I work mostly with Java, Go, and Javascript but have been known to veer into Ruby and Python when the mood strikes. I've been running APIs and web apps in Kubernetes for several years now and can break nearly anything in strange and interesting ways. Currently working in health tech, but I was a mechanical engineer working with rubber products in a past life (and I still think tires are amazing pieces of technology).
-
-  Husband to Haley, father to Piper, can opener to two cats. Infrequent social media user. Novice gardener. I don't claim to be an authority on anything I post here, but I relied on the work and knowledge of so many people over the years I feel like I should give some knowledge back. Hence, this blog."
+  bio              : "DevOps engineer by way of software developer by way of mechanical engineer. I like REST APIs, automation pipelines, infrastructure as code, and pasta.
   location         : "Cleveland, Ohio"
   email            :
   links:
     - label: "Website"
       icon: "fas fa-fw fa-link"
-      # url: "https://alexherman.net"
+      url: "https://alexherman.net"
     - label: "GitHub"
       icon: "fab fa-fw fa-github"
-      # url: "https://github.com/AlexHerman2"
+      url: "https://github.com/AlexHerman2"
 
 # Site Footer
 footer:
   links:
     - label: "GitHub"
       icon: "fab fa-fw fa-github"
-      # url:
+      url:
 
 plugins:
   - jekyll-paginate
