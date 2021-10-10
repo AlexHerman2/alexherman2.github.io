@@ -20,7 +20,7 @@ words_per_minute         : 200
 author:
   name             : "Alex Herman"
   avatar           : "/assets/images/bio-photo.jpg"
-  bio              : "DevOps engineer by way of software developer by way of mechanical engineer. I like REST APIs, automation pipelines, infrastructure as code, and pasta.
+  bio              : "DevOps engineer by way of software developer by way of mechanical engineer. I like REST APIs, automation pipelines, infrastructure as code, and coffee."
   location         : "Cleveland, Ohio"
   email            :
   links:
